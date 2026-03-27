@@ -133,28 +133,36 @@
     ];
 
     async function updateDashboard() {
-        try {
-            // 1. マップローテーション取得
-            const mapRes = await fetch(`${BASE_URL}/maprotation?auth=${API_KEY}&version=2`);
-            const mapData = await mapRes.json();
-            renderMap(mapData.ranked);
-
-            // 2. サーバー情報取得
-            const serverRes = await fetch(`${BASE_URL}/servers?auth=${API_KEY}`);
-            const serverData = await serverRes.json();
-            renderServers(serverData);
-
-            // 3. ランク分布取得
-            const rankRes = await fetch(`${BASE_URL}/rank-dist?auth=${API_KEY}`);
-            const rankData = await rankRes.json();
-            renderRank(rankData);
-
-        } catch (err) {
-            console.error("Data Fetch Error:", err);
-            document.getElementById('current-map').innerText = "API Error";
+    try {
+        // 1. マップローテーション取得 (authを最後に持ってくるのが確実です)
+        const mapRes = await fetch(`${BASE_URL}/maprotation?version=2&auth=${API_KEY}`);
+        const mapText = await mapRes.text(); // 一旦テキストとして受け取る
+        
+        // もしエラーテキストが返ってきていたら、ここで止める
+        if (mapText.includes("Error")) {
+            console.error("API Key Issue:", mapText);
+            document.getElementById('current-map').innerText = "Key Invalid";
+            return;
         }
-    }
+        
+        const mapData = JSON.parse(mapText); // 正常ならJSONとして解析
+        renderMap(mapData.ranked);
 
+        // 2. サーバー情報取得
+        const serverRes = await fetch(`${BASE_URL}/servers?auth=${API_KEY}`);
+        const serverData = await serverRes.json();
+        renderServers(serverData);
+
+        // 3. ランク分布取得
+        const rankRes = await fetch(`${BASE_URL}/rank-dist?auth=${API_KEY}`);
+        const rankData = await rankRes.json();
+        renderRank(rankData);
+
+    } catch (err) {
+        console.error("Data Fetch Error:", err);
+        document.getElementById('current-map').innerText = "API Error";
+    }
+}
     function renderMap(data) {
         document.getElementById('current-map').innerText = data.current.map;
         document.getElementById('next-map').innerText = `Next: ${data.next.map}`;
