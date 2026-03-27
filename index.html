@@ -3,95 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Legends Server World Clock</title>
+    <title>Apex Server Status & World Clock</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1a1a;
-            color: #eeeeee;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
+        :root { --apex-red: #f0131e; --bg-dark: #1a1a1a; --card-bg: #2a2a2a; --text-gray: #bbb; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-dark); color: #eee; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        h1 { color: var(--apex-red); text-transform: uppercase; border-bottom: 3px solid var(--apex-red); padding-bottom: 5px; margin-bottom: 30px; }
+        
+        .controls { margin-bottom: 20px; }
+        button { background: var(--apex-red); color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 4px; transition: 0.2s; }
+        button:hover { background: #ff4d4d; transform: scale(1.05); }
+
+        table { border-collapse: collapse; width: 100%; max-width: 900px; background-color: var(--card-bg); border-radius: 8px; overflow: hidden; }
+        th { background-color: #333; color: var(--text-gray); padding: 15px; text-align: left; font-size: 0.8em; }
+        td { padding: 15px; border-bottom: 1px solid #444; }
+        
+        .server-id { font-family: monospace; color: var(--apex-red); font-weight: bold; }
+        .city { font-weight: 500; }
+        .time { font-family: 'Courier New', monospace; color: #00ffcc; font-size: 1.1em; }
+        .ping { font-weight: bold; color: #aaa; }
+        .low-ping { color: #00ff00; } /* 100ms以下 */
+        .mid-ping { color: #ffcc00; } /* 200ms以下 */
+        .high-ping { color: #ff4444; } /* それ以上 */
+
+        @media (max-width: 600px) {
+            table { font-size: 14px; }
+            th, td { padding: 8px; }
         }
-        h1 { color: #f0131e; border-bottom: 2px solid #f0131e; padding-bottom: 10px; }
-        table {
-            border-collapse: collapse;
-            width: 90%;
-            max-width: 800px;
-            background-color: #2a2a2a;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #444;
-        }
-        th { background-color: #f0131e; color: white; text-transform: uppercase; letter-spacing: 1px; }
-        tr:hover { background-color: #333; }
-        .server-id { font-weight: bold; color: #ff4d4d; font-family: monospace; }
-        .time { font-family: 'Courier New', Courier, monospace; font-size: 1.2em; color: #00ffcc; }
     </style>
 </head>
 <body>
 
-    <h1>Apex Legends サーバー時刻ガイド</h1>
+    <h1>Apex Server Status</h1>
+
+    <div class="controls">
+        <button onclick="measureAllPings()">Pingを一斉計測</button>
+    </div>
     
     <table>
         <thead>
             <tr>
-                <th>サーバーID</th>
-                <th>ロケーション</th>
-                <th>現地時刻</th>
+                <th>SERVER ID</th>
+                <th>LOCATION</th>
+                <th>LOCAL TIME</th>
+                <th>PING (RTT)</th>
             </tr>
         </thead>
-        <tbody id="clock-table">
-            </tbody>
+        <tbody id="clock-table"></tbody>
     </table>
 
     <script>
         const servers = [
-            { id: "us-east-1", city: "北バージニア", zone: "America/New_York" },
-            { id: "us-east-2", city: "オハイオ", zone: "America/New_York" },
-            { id: "us-west-2", city: "オレゴン", zone: "America/Los_Angeles" },
-            { id: "eu-central-1", city: "フランクフルト", zone: "Europe/Berlin" },
-            { id: "sa-east-1", city: "サンパウロ", zone: "America/Sao_Paulo" },
-            { id: "ap-northeast-1", city: "東京", zone: "Asia/Tokyo" },
-            { id: "me-south-1", city: "バーレーン", zone: "Asia/Bahrain" },
-            { id: "ap-southeast-2", city: "シドニー", zone: "Australia/Sydney" },
-            { id: "ap-east-1", city: "香港", zone: "Asia/Hong_Kong" },
-            { id: "ap-southeast-1", city: "シンガポール", zone: "Asia/Singapore" }
+            { id: "us-east-1", city: "北バージニア", zone: "America/New_York", endpoint: "https://dynamodb.us-east-1.amazonaws.com" },
+            { id: "us-east-2", city: "オハイオ", zone: "America/New_York", endpoint: "https://dynamodb.us-east-2.amazonaws.com" },
+            { id: "us-west-2", city: "オレゴン", zone: "America/Los_Angeles", endpoint: "https://dynamodb.us-west-2.amazonaws.com" },
+            { id: "eu-central-1", city: "フランクフルト", zone: "Europe/Berlin", endpoint: "https://dynamodb.eu-central-1.amazonaws.com" },
+            { id: "sa-east-1", city: "サンパウロ", zone: "America/Sao_Paulo", endpoint: "https://dynamodb.sa-east-1.amazonaws.com" },
+            { id: "ap-northeast-1", city: "東京", zone: "Asia/Tokyo", endpoint: "https://dynamodb.ap-northeast-1.amazonaws.com" },
+            { id: "me-south-1", city: "バーレーン", zone: "Asia/Bahrain", endpoint: "https://dynamodb.me-south-1.amazonaws.com" },
+            { id: "ap-southeast-2", city: "シドニー", zone: "Australia/Sydney", endpoint: "https://dynamodb.ap-southeast-2.amazonaws.com" },
+            { id: "ap-east-1", city: "香港", zone: "Asia/Hong_Kong", endpoint: "https://dynamodb.ap-east-1.amazonaws.com" },
+            { id: "ap-southeast-1", city: "シンガポール", zone: "Asia/Singapore", endpoint: "https://dynamodb.ap-southeast-1.amazonaws.com" }
         ];
 
         function updateClocks() {
             const tableBody = document.getElementById('clock-table');
-            let html = '';
+            if (tableBody.innerHTML === "") {
+                servers.forEach(server => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="server-id">${server.id}</td>
+                        <td class="city">${server.city}</td>
+                        <td class="time" id="time-${server.id}">--:--:--</td>
+                        <td class="ping" id="ping-${server.id}">---</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
 
             servers.forEach(server => {
-                const now = new Date();
-                const timeString = now.toLocaleString("ja-JP", {
-                    timeZone: server.zone,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
+                const timeEl = document.getElementById(`time-${server.id}`);
+                timeEl.innerText = new Date().toLocaleString("ja-JP", {
+                    timeZone: server.zone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
                 });
-
-                html += `
-                    <tr>
-                        <td class="server-id">${server.id}</td>
-                        <td>${server.city}</td>
-                        <td class="time">${timeString}</td>
-                    </tr>
-                `;
             });
-
-            tableBody.innerHTML = html;
         }
 
-        // 1秒ごとに更新
+        async function measurePing(server) {
+            const pingEl = document.getElementById(`ping-${server.id}`);
+            pingEl.innerText = "計測中...";
+            pingEl.className = "ping";
+
+            const start = performance.now();
+            try {
+                // 実際にはCORSでブロックされますが、リクエストが到達してエラーが返るまでの時間を測ります
+                await fetch(server.endpoint, { mode: 'no-cors', cache: 'no-cache' });
+                const end = performance.now();
+                const rtt = Math.round(end - start);
+                
+                pingEl.innerText = `${rtt} ms`;
+                if (rtt < 100) pingEl.classList.add('low-ping');
+                else if (rtt < 200) pingEl.classList.add('mid-ping');
+                else pingEl.classList.add('high-ping');
+            } catch (e) {
+                pingEl.innerText = "Error";
+            }
+        }
+
+        function measureAllPings() {
+            servers.forEach(server => measurePing(server));
+        }
+
         setInterval(updateClocks, 1000);
-        updateClocks(); // 初回起動
+        updateClocks();
     </script>
 </body>
 </html>
