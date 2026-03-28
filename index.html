@@ -14,23 +14,28 @@
             align-items: center;
             padding: 20px;
         }
-        h1 { color: #f0131e; border-bottom: 2px solid #f0131e; padding-bottom: 10px; }
+        h1 { color: #f0131e; border-bottom: 2px solid #f0131e; padding-bottom: 10px; font-size: 1.5rem; }
+        
+        /* 表の横幅を狭く調整 (max-widthを800pxから500pxへ) */
         table {
             border-collapse: collapse;
-            width: 90%;
-            max-width: 800px;
+            width: 100%;
+            max-width: 500px; 
             background-color: #2a2a2a;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            font-size: 0.9rem;
         }
         th, td {
-            padding: 15px;
+            padding: 10px 15px;
             text-align: left;
             border-bottom: 1px solid #444;
         }
         th { background-color: #f0131e; color: white; text-transform: uppercase; letter-spacing: 1px; }
         tr:hover { background-color: #333; }
+        
         .server-id { font-weight: bold; color: #ff4d4d; font-family: monospace; }
-        .time { font-family: 'Courier New', Courier, monospace; font-size: 1.2em; color: #00ffcc; }
+        /* 時刻のフォントサイズを微調整 */
+        .time { font-family: 'Courier New', Courier, monospace; font-size: 1.1em; color: #00ffcc; }
     </style>
 </head>
 <body>
@@ -45,8 +50,7 @@
                 <th>現地時刻</th>
             </tr>
         </thead>
-        <tbody id="clock-table">
-            </tbody>
+        <tbody id="clock-table"></tbody>
     </table>
 
     <script>
@@ -73,7 +77,7 @@
                     timeZone: server.zone,
                     hour: '2-digit',
                     minute: '2-digit',
-                    second: '2-digit',
+                    /* secondを削除しました */
                     hour12: false
                 });
 
@@ -89,9 +93,9 @@
             tableBody.innerHTML = html;
         }
 
-        // 1秒ごとに更新
-        setInterval(updateClocks, 1000);
-        updateClocks(); // 初回起動
+        // 1分ごとに更新（秒を表示しないため、1秒ごとより負荷を下げられます）
+        setInterval(updateClocks, 60000);
+        updateClocks(); 
     </script>
 </body>
 </html>
