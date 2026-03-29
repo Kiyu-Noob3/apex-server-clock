@@ -5,56 +5,102 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Apex Legends Server World Clock</title>
     <style>
+        :root {
+            --apex-red: #f0131e;
+            --bg-dark: #1a1a1a;
+            --card-bg: #2a2a2a;
+            --accent-green: #00ffcc;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1a1a;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
             color: #eeeeee;
             display: flex;
             flex-direction: column;
             align-items: center;
+            margin: 0;
             padding: 20px;
         }
-        h1 { color: #f0131e; border-bottom: 2px solid #f0131e; padding-bottom: 10px; font-size: 1.5rem; text-transform: uppercase; }
-        
+
+        h1 { 
+            color: var(--apex-red); 
+            border-bottom: 2px solid var(--apex-red); 
+            padding-bottom: 10px; 
+            font-size: 1.8rem;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        /* --- レスポンシブ対応のテーブル設定 --- */
+        .table-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
         table {
             border-collapse: collapse;
             width: 100%;
-            max-width: 450px;
-            background-color: #2a2a2a;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            font-size: 0.95rem;
+            /* PCでは最大600px、スマホでは画面幅いっぱい */
+            max-width: 600px; 
+            background-color: var(--card-bg);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            font-size: 1rem;
         }
+
         th, td {
-            padding: 12px 15px;
+            padding: 15px;
             text-align: left;
             border-bottom: 1px solid #444;
         }
-        th { background-color: #f0131e; color: white; text-transform: uppercase; letter-spacing: 1px; }
+
+        th { 
+            background-color: var(--apex-red); 
+            color: white; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+
+        /* スマホ向けの微調整 (画面幅が480px以下の場合) */
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.3rem; }
+            th, td { padding: 10px 8px; font-size: 0.85rem; }
+            .time { font-size: 1.1rem !important; }
+        }
+
         tr:hover { background-color: #333; }
         
         .server-id { font-weight: bold; color: #ff4d4d; font-family: 'Consolas', monospace; }
-        .time { font-family: 'Courier New', Courier, monospace; font-size: 1.3em; color: #00ffcc; white-space: nowrap; font-weight: bold; }
-
-        /* 点滅用のスタイル */
-        .hidden {
-            visibility: hidden;
+        .time { 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 1.4rem; 
+            color: var(--accent-green); 
+            white-space: nowrap; 
+            font-weight: bold;
         }
+
+        .hidden { visibility: hidden; }
     </style>
 </head>
 <body>
 
-    <h1>Apex Legends サーバー時刻ガイド</h1>
+    <h1>Apex Server World Clock</h1>
     
-    <table>
-        <thead>
-            <tr>
-                <th>サーバーID</th>
-                <th>ロケーション</th>
-                <th>現地時刻</th>
-            </tr>
-        </thead>
-        <tbody id="clock-table"></tbody>
-    </table>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>SERVER ID</th>
+                    <th>LOCATION</th>
+                    <th>LOCAL TIME</th>
+                </tr>
+            </thead>
+            <tbody id="clock-table"></tbody>
+        </table>
+    </div>
 
     <script>
         const servers = [
@@ -81,16 +127,17 @@
             let html = '';
 
             servers.forEach(server => {
-                // 日本語の「時」を回避するため、Intl.DateTimeFormatで数値だけを取得
-                const timeParts = new Intl.DateTimeFormat('en-US', {
+                // 「時」を表示させないために en-US ロケールを使用
+                const formatter = new Intl.DateTimeFormat('en-US', {
                     timeZone: server.zone,
                     hour: '2-digit',
                     minute: '2-digit',
                     hour12: false
-                }).formatToParts(now);
+                });
 
-                const hh = timeParts.find(p => p.type === 'hour').value;
-                const mm = timeParts.find(p => p.type === 'minute').value;
+                const parts = formatter.formatToParts(now);
+                const hh = parts.find(p => p.type === 'hour').value;
+                const mm = parts.find(p => p.type === 'minute').value;
 
                 html += `
                     <tr>
@@ -104,7 +151,7 @@
             tableBody.innerHTML = html;
         }
 
-        // 点滅を滑らかにするため、更新間隔を250ms（0.25秒）に設定
+        // 高速点滅を維持するため、250msごとに描画更新
         setInterval(updateClocks, 250);
         updateClocks(); 
     </script>
