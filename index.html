@@ -16,11 +16,10 @@
         }
         h1 { color: #f0131e; border-bottom: 2px solid #f0131e; padding-bottom: 10px; font-size: 1.5rem; }
         
-        /* 表の横幅を狭く調整 (max-widthを800pxから500pxへ) */
         table {
             border-collapse: collapse;
             width: 100%;
-            max-width: 500px; 
+            max-width: 450px; /* さらに少しだけタイトにしました */
             background-color: #2a2a2a;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             font-size: 0.9rem;
@@ -34,8 +33,15 @@
         tr:hover { background-color: #333; }
         
         .server-id { font-weight: bold; color: #ff4d4d; font-family: monospace; }
-        /* 時刻のフォントサイズを微調整 */
-        .time { font-family: 'Courier New', Courier, monospace; font-size: 1.1em; color: #00ffcc; }
+        .time { font-family: 'Courier New', Courier, monospace; font-size: 1.2em; color: #00ffcc; white-space: nowrap; }
+
+        /* 点滅用のスタイル：非表示のときも場所を確保するために visibility を使用 */
+        .blink-colon {
+            transition: opacity 0.1s;
+        }
+        .hidden {
+            visibility: hidden;
+        }
     </style>
 </head>
 <body>
@@ -69,23 +75,24 @@
 
         function updateClocks() {
             const tableBody = document.getElementById('clock-table');
+            const now = new Date();
+            
+            // 1秒ごとに点滅の状態を判定（偶数秒は表示、奇数秒は非表示）
+            const isVisible = now.getSeconds() % 2 === 0;
+            const colonHtml = isVisible ? ':' : '<span class="hidden">:</span>';
+
             let html = '';
 
             servers.forEach(server => {
-                const now = new Date();
-                const timeString = now.toLocaleString("ja-JP", {
-                    timeZone: server.zone,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    /* secondを削除しました */
-                    hour12: false
-                });
+                // 時と分を別々に取得して、間に点滅するコロンを挟む
+                const hh = now.toLocaleString("ja-JP", { timeZone: server.zone, hour: '2-digit', hour12: false });
+                const mm = now.toLocaleString("ja-JP", { timeZone: server.zone, minute: '2-digit' });
 
                 html += `
                     <tr>
                         <td class="server-id">${server.id}</td>
                         <td>${server.city}</td>
-                        <td class="time">${timeString}</td>
+                        <td class="time">${hh}${colonHtml}${mm}</td>
                     </tr>
                 `;
             });
@@ -93,8 +100,8 @@
             tableBody.innerHTML = html;
         }
 
-        // 1分ごとに更新（秒を表示しないため、1秒ごとより負荷を下げられます）
-        setInterval(updateClocks, 60000);
+        // 1秒ごとに実行
+        setInterval(updateClocks, 1000);
         updateClocks(); 
     </script>
 </body>
