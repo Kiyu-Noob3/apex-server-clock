@@ -14,31 +14,28 @@
             align-items: center;
             padding: 20px;
         }
-        h1 { color: #f0131e; border-bottom: 2px solid #f0131e; padding-bottom: 10px; font-size: 1.5rem; }
+        h1 { color: #f0131e; border-bottom: 2px solid #f0131e; padding-bottom: 10px; font-size: 1.5rem; text-transform: uppercase; }
         
         table {
             border-collapse: collapse;
             width: 100%;
-            max-width: 450px; /* さらに少しだけタイトにしました */
+            max-width: 450px;
             background-color: #2a2a2a;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
         th, td {
-            padding: 10px 15px;
+            padding: 12px 15px;
             text-align: left;
             border-bottom: 1px solid #444;
         }
         th { background-color: #f0131e; color: white; text-transform: uppercase; letter-spacing: 1px; }
         tr:hover { background-color: #333; }
         
-        .server-id { font-weight: bold; color: #ff4d4d; font-family: monospace; }
-        .time { font-family: 'Courier New', Courier, monospace; font-size: 1.2em; color: #00ffcc; white-space: nowrap; }
+        .server-id { font-weight: bold; color: #ff4d4d; font-family: 'Consolas', monospace; }
+        .time { font-family: 'Courier New', Courier, monospace; font-size: 1.3em; color: #00ffcc; white-space: nowrap; font-weight: bold; }
 
-        /* 点滅用のスタイル：非表示のときも場所を確保するために visibility を使用 */
-        .blink-colon {
-            transition: opacity 0.1s;
-        }
+        /* 点滅用のスタイル */
         .hidden {
             visibility: hidden;
         }
@@ -77,16 +74,23 @@
             const tableBody = document.getElementById('clock-table');
             const now = new Date();
             
-            // 1秒ごとに点滅の状態を判定（偶数秒は表示、奇数秒は非表示）
-            const isVisible = now.getSeconds() % 2 === 0;
+            // 0.5秒（500ミリ秒）ごとに点滅の状態を判定
+            const isVisible = now.getMilliseconds() < 500;
             const colonHtml = isVisible ? ':' : '<span class="hidden">:</span>';
 
             let html = '';
 
             servers.forEach(server => {
-                // 時と分を別々に取得して、間に点滅するコロンを挟む
-                const hh = now.toLocaleString("ja-JP", { timeZone: server.zone, hour: '2-digit', hour12: false });
-                const mm = now.toLocaleString("ja-JP", { timeZone: server.zone, minute: '2-digit' });
+                // 日本語の「時」を回避するため、Intl.DateTimeFormatで数値だけを取得
+                const timeParts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: server.zone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                }).formatToParts(now);
+
+                const hh = timeParts.find(p => p.type === 'hour').value;
+                const mm = timeParts.find(p => p.type === 'minute').value;
 
                 html += `
                     <tr>
@@ -100,8 +104,8 @@
             tableBody.innerHTML = html;
         }
 
-        // 1秒ごとに実行
-        setInterval(updateClocks, 1000);
+        // 点滅を滑らかにするため、更新間隔を250ms（0.25秒）に設定
+        setInterval(updateClocks, 250);
         updateClocks(); 
     </script>
 </body>
